@@ -1,103 +1,94 @@
-const express = require("express"); // importa o módulo express do node_modules
-const app = express(); // cria o nosso objeto app, que vai poder utilizar tudo o que o express possui
+const express = require("express");//require é necessário para importar uma biblioteca/módulo.
+const jogoSchema = require('./models/jogo');
+const mongoose = require("./database");
 
-app.use(express.json()); // Converte requisições e repostas para JSON (JavaScript Object Notation)
+const app = express();//Instanciando um servidor na variável app que será utilizada para chamar os métodos
+//GET/POST/PUT/DELETE
 
-const porta = 3000; // constante para salvar a porta do servidor;
+const porta = 3000;
+app.use(express.json());//Adicionando um middleware de configuração para que o servidor entenda o tipo de dados que serão trabalhados.
+//use é uma propriedade para se utilizar middlewares na aplicação.
 
-let jogos = [
-  
-   
-];
 
-// CRUD - Create[POST] - Read[GET] - Update[PUT] - Delete[DELETE]
-
-// GET / - home
+//Primeiro parâmetro informa-se a rota, neste caso a inicial e no segundo uma função de callback
+//req - cliente => servidor, res - servidor => cliente.
 app.get("/", (req, res) => {
-  res.status(200).send({ hello: "Hello World Express" }); 
+    res.send({ info:  "Hello MongoDB"});
 });
 
-app.get("/jogos", (req, res) => {
-  res.json({ jogos }); 
+app.get('/jogos', async (req, res) => {
+    const jogos = await jogoSchema.find();
+    res.send(jogos)
+});
+app.get("/jogos/:id", async (req, res) => {
+  const id = req.params.id;
+  // Verificar se o id recebido no parametro é um ID válido:
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(422).send({ error: "Id inválido" });
+    return;
+  }
+  // Buscar no mongodb o document que possui o id recebido pela req.param
+  const jogo = await jogoSchema.findById(id);
+  // Verificar se o document foi encontrado:
+  if (!jogo) {
+    res.status(404).send({ erro: "Jogo não encontrado!" });
+    return;
+  }
+  res.send({ jogo });
 });
 
-app.get("/jogos/:id", (req, res) => {
-  const id = +req.params.id;//pega o id passado na rota e armazena na variável chamada id.
-  const jogo = jogos.find((jogo) => jogo.id === id);//Percorre a lista de jogos e retorna o item que tem o mesmo id da variavel.
+app.post('/jogos', async (req, res) => {
+    const jogo = req.body;
+    if (!jogo || !jogo.nome || !jogo.imagem) {
+      res.status(400).send({ error: "Verifique se os campos foram preenchidos corretamente." });
+      return;
+    }
+    await new jogoSchema(jogo).save()
 
-  //se a variável jogo estiver vazia será apresentado a mensagem de erro caso contrário o jogo informado será apresentado na tela.
-  !jogo
-    ? res.status(404).send({ error: "Jogo não existe" })
-    : res.json({ jogo });
+    res.status(201).send('Jogo cadastrado!');
+  
 });
 
+app.put('/jogos/:id', async(req, res) => {
+  const id = req.params.id;
+  if (!mongoose.Types.ObjectId.isValid(id)){
+    res.status(422).send({error: "Id inválido"});
+    return;
+  }
+  const jogo = await jogoSchema.findById(id);
 
-app.post("/jogos", (req, res) => {
-  const jogo = req.body; // Pega todos os campos passados pelo body.
-
-  //Se não houver algum dos campos como nome ou imagem não será efetuada a inclusão do jogo na lista.
-  if (!jogo || !jogo.nome || !jogo.imagem) {
-    res.status(400).send({ error: "Cadastro inválido!" });
+  if(!jogo) {
+    res.status(404).send({erro: "Jogo não encontrado!"});
     return;
   }
 
-  // Pega o último elemento da lista.
-  const ultimoJogo = jogos[jogos.length - 1];//O tamanho da lista - 1 corresponde ao índice do último item.
-  //E esse será armazenado na variável ultimoJogo.
+  const novoJogo = req.body;
 
-  //console.log(jogos.length)
-
-  // Testa se a lista não está vazia e gerando o número de id.
-  if (jogos.length) { //Se a lista conter algum item, será somado 1 ao valor do último id para esse ser o id no novo item que será incluído na lista.
-    jogo.id = ultimoJogo.id + 1;
-    jogos.push(jogo); // Insere o objeto no array filmes
-  } else {
-    // Caso a lista esteja vazia o valor de id é 1
-    jogo.id = 1;
-    jogos.push(jogo);
+  if(!jogo || !jogo.nome|| !jogo.imagem) {
+    res.status(400).send({ error: "Verifique os campos informados."});
+    return;
   }
+  await jogoSchema.findOneAndUpdate({_id: id}, novoJogo);
 
-  res.status(201).send({ jogo });
+  const jogoAtualizado = await jogoSchema.findById(req.params.id);
+
+  res.send({ jogoAtualizado });
 });
 
-// PUT 
-app.put("/jogos/:id", (req, res) => {
-    const jogo = req.body;
-    if (!jogo || !jogo.nome || !jogo.imagem) {
-      res.status(400).send({ error: "Cadastro inválido!" });
-    }
-    const gameFound = jogos.find(jogo => jogo.id == req.params.id);//verificando se há o jogo na lista pelo id informado na rota.
-    //Encontrando o jogo com id informado as alterações serão salvas na variável jogo e em seguda incluídas na lista na posição que estava o jogo referido.
-    if(gameFound){
-       const jogo = {//spread operator, cria um objeto novo a partir de um existente, o req.body vai sobrepor o que há em gameFound
-      ...gameFound,
-      ...req.body    
-    }
-    jogos[jogo.id-1] = jogo
-    res.send("Cadastro alterado com sucesso!");
+app.delete('/jogos/:id', async(req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)){
+    res.status(422).send({error: "Id inválido"});
+    return;
+  }
+  const jogo = await jogoSchema.findById(req.params.id)
+  if(!jogo){
+    res.status(404).send({error: "Jogo não encontrado!"});
+  }
+  await jogoSchema.findByIdAndDelete(req.params.id);
+  res.send({message: "Jogo excluído com suceso!"});
+})
 
-    } else {
-       res.status(404).send({ error: "Jogo não existe" })
-    }
-   }) 
-    
-// Delete
-app.delete("/jogos/:id", (req, res) => {
-  const gameFound = jogos.find(jogo => jogo.id == req.params.id);
-  if (gameFound) {
-    const jogosFiltrados = jogos.filter(jogo => jogo.id != req.params.id);//Criando uma nova lista onde não constará o jogo cujo o id foi passado na rota.
-    jogos = jogosFiltrados;
-    res.send("Jogo apagado com sucesso!");
-    } else {
-      res.status(404).send({ error: "Jogo não existe" })
-    }
-  
-});
-
-/* 
-A função listen do objeto app serve para "ligar" o nosso back-end ou servir o nosso back-end
-É obrigatório que essa chamada de função esteja SEMPRE no final do nosso código! */
-app.listen(porta, () => {
-  // recebe dois parametros, a porta e um função de callback para principalmente mostra um mensagem no console.
-  console.log(`Servidor rodando em http://localhost:${porta}`);
-});
+//Após o servidor ouvir a porta informada no primeiro parâmetro executará a função de callback.
+app.listen(porta, () =>
+  console.log(`Servidor rodando em http://localhost:${porta}`)
+);

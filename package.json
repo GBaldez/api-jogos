@@ -1,7 +1,7 @@
 {
   "name": "api-jogos",
   "version": "1.0.0",
-  "description": "api para catalogo de jogos",
+  "description": "Api Catálogo De Jogos",
   "main": "index.js",
   "scripts": {
     "star": "node index",
@@ -11,17 +11,17 @@
     "type": "git",
     "url": "git+https://github.com/GBaldez/api-jogos.git"
   },
-  "author": "Gabriel Baldez",
+  "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/GBaldez/api-jogos/issues"
   },
   "homepage": "https://github.com/GBaldez/api-jogos#readme",
-  "dependencies": {
-    "express": "^4.17.1",
-    "prompt-sync": "^4.2.0"
-  },
   "devDependencies": {
     "nodemon": "^2.0.12"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "mongoose": "^6.0.2"
   }
 }
